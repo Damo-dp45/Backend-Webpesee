@@ -1,0 +1,13 @@
+api_platform:
+    title: Hello API Platform
+    version: 1.0.0
+    defaults:
+        stateless: true
+        cache_headers:
+            vary: ['Content-Type', 'Authorization', 'Origin']
+    show_webby: false # Permet de désactivé l'arraigné
+    use_symfony_listeners: true # !! d'utiliser le Controller pour les opérations personalisés..
+    formats:
+        jsonld: ['application/ld+json']
+        json: ['application/json']
+        multipart : ['multipart/form-data']
