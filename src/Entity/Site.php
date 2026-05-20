@@ -160,7 +160,7 @@ class Site extends EntityBase implements EntrepriseOwnedInterface
 
     #[ORM\ManyToOne(inversedBy: 'sites')]
     #[Groups(['read:Site', 'write:AssignerOperateur'])]
-    private ?User $operateur = null;
+    private ?User $operateur = null; // Un site a un opérateur et un opérateur peut gérer plusieurs sites
 
     /**
      * @var Collection<int, Paiement>
@@ -178,7 +178,7 @@ class Site extends EntityBase implements EntrepriseOwnedInterface
      * @var Collection<int, DemandeSolde>
      */
     #[ORM\OneToMany(targetEntity: DemandeSolde::class, mappedBy: 'site')]
-    private Collection $demandeSoldes; // Un site a un opérateur et un opérateur peut gérer plusieurs sites
+    private Collection $demandeSoldes;
 
     public function __construct()
     {

@@ -2,100 +2,182 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\DateFilter;
+use ApiPlatform\Doctrine\Orm\Filter\OrderFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\OpenApi\Model\Operation as ModelOperation;
+use App\Entity\Interface\SiteOwnedInterface;
 use App\Repository\OperationRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: OperationRepository::class)]
-class Operation
+#[ApiResource(
+    security: "is_granted('IS_AUTHENTICATED_FULLY')",
+    normalizationContext: ['groups' => ['read:Operation', 'read:Base'], 'skip_null_values' => false],
+    paginationItemsPerPage: 25,
+    paginationClientItemsPerPage: true,
+    order: ['date2' => 'DESC'],
+    operations: [
+        new GetCollection(
+            security: "is_granted('VOIR', 'Operation')",
+            openapi: new ModelOperation(
+                summary: 'Liste des opérations de pesée',
+                description: 'Permet de voir la liste des opérations de pesée',
+                security: [['bearerAuth' => []]]
+            )
+        ),
+        new Get(
+            security: "is_granted('VOIR', object)",
+            requirements: ['id' => '\d+'],
+            openapi: new ModelOperation(
+                summary: 'Une opération de pesée',
+                description: 'Permet de voir une opération de pesée',
+                security: [['bearerAuth' => []]]
+            )
+        ),
+    ],
+    openapi: new ModelOperation(
+        security: [['bearerAuth' => []]]
+    )
+)]
+#[ApiFilter(SearchFilter::class, properties: [
+    'mouvement' => 'partial',
+    'client' => 'partial',
+    'fournisseur.id' => 'exact',
+    'produit.id' => 'exact',
+    'site.id' => 'exact',
+    'transporteur' => 'partial',
+    'immatriculation' => 'partial',
+    'provenance' => 'partial',
+    'destination' => 'partial'
+])]
+#[ApiFilter(DateFilter::class, properties: ['date2'])]
+#[ApiFilter(OrderFilter::class, properties: [
+    'id',
+    'date2',
+    'poidsnet',
+    'poidsbrut'
+])]
+class Operation implements SiteOwnedInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['read:Operation'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $codesecret = null;
+    private ?string $codesecret = null; // Un champ plat desktop non exposé !!
 
     #[ORM\Column(length: 255)]
+    #[Groups(['read:Operation'])]
     private ?string $mouvement = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['read:Operation'])]
     private ?string $client = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['read:Operation'])]
     private ?string $destination = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['read:Operation'])]
     private ?string $provenance = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['read:Operation'])]
     private ?string $transporteur = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['read:Operation'])]
     private ?string $chauffeur = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['read:Operation'])]
     private ?string $immatriculation = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['read:Operation'])]
     private ?string $remorque = null;
 
     #[ORM\Column]
+    #[Groups(['read:Operation'])]
     private ?int $poids1 = null;
 
     #[ORM\Column]
+    #[Groups(['read:Operation'])]
     private ?int $poids2 = null;
 
     #[ORM\Column]
+    #[Groups(['read:Operation'])]
     private ?int $poidsbrut = null;
 
     #[ORM\Column]
+    #[Groups(['read:Operation'])]
     private ?int $poidsnet = null;
 
     #[ORM\Column]
+    #[Groups(['read:Operation'])]
     private ?\DateTime $date1 = null;
 
     #[ORM\Column]
+    #[Groups(['read:Operation'])]
     private ?\DateTime $date2 = null;
 
     #[ORM\Column(type: Types::TIME_MUTABLE)]
+    #[Groups(['read:Operation'])]
     private ?\DateTime $temps1 = null;
 
     #[ORM\Column(type: Types::TIME_MUTABLE)]
+    #[Groups(['read:Operation'])]
     private ?\DateTime $temps2 = null;
 
     #[ORM\Column]
+    #[Groups(['read:Operation'])]
     private ?\DateTime $datesearch = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['read:Operation'])]
     private ?string $codepesee = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['read:Operation'])]
     private ?string $numticket = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $code = null;
+    private ?string $code = null; // -- Le 'codesite' du site ex: SOF010, !!
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['read:Operation'])]
     private ?string $peseur = null;
 
     #[ORM\ManyToOne(inversedBy: 'operations')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['read:Operation'])]
     private ?Site $site = null;
 
     #[ORM\ManyToOne(inversedBy: 'operations')]
+    #[Groups(['read:Operation'])]
     private ?Fournisseur $fournisseur = null;
 
     #[ORM\ManyToOne(inversedBy: 'operations')]
+    #[Groups(['read:Operation'])]
     private ?Produit $produit = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $codesite = null; // L'id interne de l'application desktop '1, 2..'
+    private ?string $codesite = null; // L'id interne de l'application desktop '1, 2..', !!
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['read:Operation'])]
     private ?string $libellesite = null;
 
     /**
@@ -105,9 +187,11 @@ class Operation
     private Collection $paiements;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['read:Operation'])]
     private ?int $prixunitaire = null; // Le prix unitaire appliqué au moment de la pesée '=' prixspeciale du fournisseur si défini, sinon prix du produit
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['read:Operation'])]
     private ?int $montantcalcule = null; // Le 'poidsnet' × 'prixunitaire'
 
     public function __construct()
@@ -197,7 +281,7 @@ class Operation
         return $this->chauffeur;
     }
 
-    public function setChauffeur(string $chauffeur): static
+    public function setChauffeur(?string $chauffeur): static
     {
         $this->chauffeur = $chauffeur;
 

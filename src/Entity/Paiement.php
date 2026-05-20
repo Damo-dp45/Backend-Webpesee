@@ -2,40 +2,138 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\DateFilter;
+use ApiPlatform\Doctrine\Orm\Filter\OrderFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
 use App\Domain\Enum\ModePaiement;
 use App\Domain\Enum\StatutPaiement;
+use App\Entity\Interface\SiteOwnedInterface;
 use App\Repository\PaiementRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: PaiementRepository::class)]
-class Paiement extends EntityBase
+#[ApiResource(
+    security: "is_granted('IS_AUTHENTICATED_FULLY')",
+    normalizationContext: ['groups' => ['read:Paiement', 'read:Base'], 'skip_null_values' => false],
+    denormalizationContext: ['groups' => ['write:Paiement']],
+    paginationItemsPerPage: 25,
+    paginationClientItemsPerPage: true,
+    order: ['createdAt' => 'DESC'],
+    operations: [
+        new GetCollection(
+            security: "is_granted('VOIR', 'Paiement')",
+            openapi: new OpenApiOperation(
+                summary: 'La liste des paiements',
+                description: 'Permet de voir la liste des paiements',
+                security: [['bearerAuth' => []]]
+            )
+        ),
+        new Get(
+            security: "is_granted('VOIR', object)",
+            requirements: ['id' => '\d+'],
+            openapi: new OpenApiOperation(
+                summary: 'Le paiement',
+                description: 'Permet de voir un paiement',
+                security: [['bearerAuth' => []]]
+            )
+        ),
+        new Post(
+            security: "is_granted('CREER', 'Paiement')",
+            // input: PaiementInput::class,
+            // processor: PaiementProcessor::class,
+            denormalizationContext: ['groups' => ['write:PaiementInput']], /*
+                - Le processor calcule le montant, débite le site, crée le MouvementCaisse et déclenche le mobile money si besoin
+            */
+            openapi: new OpenApiOperation(
+                summary: 'Créer un paiement',
+                description: 'Payer un fournisseur (planteur) en une ou plusieurs fois',
+                security: [['bearerAuth' => []]]
+            )
+        ),
+        new Patch(
+            security: "is_granted('MODIFIER', object)",
+            requirements: ['id' => '\d+'],
+            // processor: UpdatedbyProcessor::class,
+            openapi: new OpenApiOperation(
+                summary: 'Modification d\'un paiement',
+                description: 'Permet de modifier un paiement',
+                security: [['bearerAuth' => []]]
+            )
+        ),
+        new Patch(
+            security: "is_granted('SUPPRIMER', object)",
+            uriTemplate: '/paiements/{id}/remove',
+            requirements: ['id' => '\d+'],
+            input: false,
+            // processor: SoftDeleteProcessor::class,
+            openapi: new OpenApiOperation(
+                summary: 'Mise en corbeille d\'un paiement',
+                description: 'Permet de mettre un paiement en corbeille',
+                security: [['bearerAuth' => []]]
+            )
+        )
+    ],
+    openapi: new OpenApiOperation(
+        security: [['bearerAuth' => []]]
+    )
+)]
+#[ApiFilter(SearchFilter::class, properties: [
+    'statut' => 'exact',
+    'modepaiement' => 'exact',
+    'fournisseur.id' => 'exact',
+    'site.id' => 'exact'
+])]
+#[ApiFilter(DateFilter::class, properties: ['createdAt'])]
+#[ApiFilter(OrderFilter::class, properties: [
+    'id',
+    'montant',
+    'createdAt'
+])]
+class Paiement extends EntityBase implements SiteOwnedInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['read:Paiement', 'read:MouvementCaisse'])]
     private ?int $id = null;
 
     #[ORM\Column]
+    #[Groups(['read:Paiement', 'read:MouvementCaisse'])]
     private ?int $montant = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['read:Paiement'])]
     private ?string $modepaiement = ModePaiement::ESPECES->value;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['read:Paiement'])]
     private ?string $referencemobile = null; // La référence de transaction mobile money 'numéro de reçu', 'Id transaction'
 
     #[ORM\Column(length: 255)]
+    #[Groups(['read:Paiement'])]
     private ?string $statut = StatutPaiement::EN_ATTENTE->value;
 
     #[ORM\ManyToOne(inversedBy: 'paiements')]
+    #[Groups(['read:Paiement'])]
     private ?Fournisseur $fournisseur = null;
 
     #[ORM\ManyToOne(inversedBy: 'paiements')]
+    #[Groups(['read:Paiement'])]
     private ?Site $site = null;
 
     #[ORM\ManyToOne(inversedBy: 'paiements')]
+    #[Groups(['read:Paiement'])]
     private ?Operation $operation = null; // La pesée associée, 'optionnel' vu que le paiement global est possible
 
     /**

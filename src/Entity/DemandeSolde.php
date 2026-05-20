@@ -2,36 +2,127 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\DateFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
+use App\Entity\Interface\SiteOwnedInterface;
 use App\Repository\DemandeSoldeRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use App\Domain\Enum\StatutDemande;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: DemandeSoldeRepository::class)]
-class DemandeSolde extends EntityBase
+#[ApiResource(
+    security: "is_granted('IS_AUTHENTICATED_FULLY')",
+    normalizationContext: ['groups' => ['read:DemandeSolde', 'read:Base'], 'skip_null_values' => false],
+    denormalizationContext: ['groups' => ['write:DemandeSolde']],
+    paginationItemsPerPage: 25,
+    paginationClientItemsPerPage: true,
+    order: ['createdAt' => 'DESC'],
+    operations: [
+        new GetCollection(
+            security: "is_granted('VOIR', 'DemandeSolde')",
+            openapi: new OpenApiOperation(
+                summary: 'Liste des demandes de solde',
+                description: 'Permet de voir la liste des demandes de solde',
+                security: [['bearerAuth' => []]]
+            )
+        ),
+        new Get(
+            security: "is_granted('VOIR', object)",
+            requirements: ['id' => '\d+'],
+            openapi: new OpenApiOperation(
+                summary: 'Une demande de solde',
+                description: 'Permet de voir une demandes de solde',
+                security: [['bearerAuth' => []]]
+            )
+        ),
+        new Post(
+            security: "is_granted('CREER', 'DemandeSolde')", /*
+                - Uniquement l'opérateur dont le site est épuisé
+            */
+            // processor: DemandeSoldeProcessor::class,
+            openapi: new OpenApiOperation(
+                summary: 'Créer une demande de solde',
+                description: 'L\'opérateur demande une recharge de solde pour son site',
+                security: [['bearerAuth' => []]]
+            )
+        ),
+        new Patch(
+            security: "is_granted('TRAITER', object)",
+            uriTemplate: '/demandes-solde/{id}/approuver',
+            requirements: ['id' => '\d+'],
+            input: false,
+            /*
+            processor: ApprouverDemandeProcessor::class, 
+                - Crédite Site.solde, débite Entreprise.solde, crée MouvementCaisse
+            */
+            openapi: new OpenApiOperation(
+                summary: 'Approuver une demande de solde',
+                security: [['bearerAuth' => []]]
+            )
+        ),
+        new Patch(
+            security: "is_granted('TRAITER', object)",
+            uriTemplate: '/demandes-solde/{id}/rejeter',
+            requirements: ['id' => '\d+'],
+            // input: RejeterDemandeInput::class,
+            // processor: RejeterDemandeProcessor::class,
+            denormalizationContext: ['groups' => ['write:RejeterDemande']],
+            openapi: new OpenApiOperation(
+                summary: 'Rejeter une demande de solde',
+                security: [['bearerAuth' => []]]
+            )
+        ),
+    ],
+    openapi: new OpenApiOperation(
+        security: [['bearerAuth' => []]]
+    )
+)]
+#[ApiFilter(SearchFilter::class, properties: [
+    'statut' => 'exact',
+    'site.id' => 'exact'
+])]
+#[ApiFilter(DateFilter::class, properties: ['createdAt'])]
+class DemandeSolde extends EntityBase implements SiteOwnedInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['read:DemandeSolde'])]
     private ?int $id = null;
 
     #[ORM\Column]
+    #[Groups(['read:DemandeSolde', 'write:DemandeSolde'])]
     private ?int $montantdemande = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $statut = null;
+    #[Groups(['read:DemandeSolde'])]
+    private ?string $statut = StatutDemande::EN_ATTENTE->value;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['read:DemandeSolde', 'write:DemandeSolde'])]
     private ?string $motif = null;
 
     #[ORM\ManyToOne(inversedBy: 'demandeSoldes')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['read:DemandeSolde'])]
     private ?Site $site = null;
 
     #[ORM\ManyToOne(inversedBy: 'demandeSoldes')]
+    #[Groups(['read:DemandeSolde'])]
     private ?User $traitePar = null; // L'utilisateur qui a traité la demande 'agent' ou 'admin'
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['read:DemandeSolde'])]
     private ?\DateTimeImmutable $traiteAt = null;
 
     /**

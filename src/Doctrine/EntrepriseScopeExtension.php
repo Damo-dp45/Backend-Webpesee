@@ -7,6 +7,7 @@ use ApiPlatform\Doctrine\Orm\Extension\QueryItemExtensionInterface;
 use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
 use ApiPlatform\Metadata\Operation;
 use App\Entity\Interface\EntrepriseOwnedInterface;
+use App\Entity\Interface\SiteOwnedInterface;
 use App\Entity\User;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -45,25 +46,55 @@ class EntrepriseScopeExtension implements QueryCollectionExtensionInterface, Que
     private function addWhere(string $resourceClass, QueryBuilder $queryBuilder)
     {
         /**
-         * @var User
+         * @var User|null
          */
         $user = $this->security->getUser();
-
         if(!$user || $this->security->isGranted('ROLE_SUPER_ADMIN')) {
+            /*
+                - Super admin : pas de filtre entreprise
+                - Mais on applique quand même le soft delete
+                if (is_subclass_of($resourceClass, EntityBase::class)) {
+                    $alias = $queryBuilder->getAllAliases()[0];
+                    $queryBuilder->andWhere("$alias.deletedAt IS NULL");
+                }
+            */
             return;
         }
+
+        $alias = $queryBuilder->getAllAliases()[0];
+
         if(is_subclass_of($resourceClass, EntrepriseOwnedInterface::class)) {
-            $entrepriseId = $user->getEntreprise()->getId();
-            if($entrepriseId !== null) {
-                $alias = $queryBuilder->getAllAliases()[0];
+            $entreprise = $user->getEntreprise();
+            if($entreprise !== null) {
                 $queryBuilder
-                    ->andWhere("$alias.identreprise = :entrepriseId")
+                    ->andWhere("$alias.entreprise = :entreprise")
                     ->andWhere("$alias.deletedAt IS NULL")
-                    ->setParameter('entrepriseId', $entrepriseId);
+                    ->setParameter('entreprise', $entreprise);
             } else {
-                
             }
         }
-    }
 
+        if(is_subclass_of($resourceClass, SiteOwnedInterface::class)) {
+            $queryBuilder->andWhere("$alias.deletedAt IS NULL");
+            if($this->security->isGranted('ROLE_OPERATEUR') && !$this->security->isGranted('ROLE_AGENT')) { /*
+                - L'opérateur ne voit que ses sites assignés
+            */
+                $queryBuilder
+                    ->join("$alias.site", 'scope_site')
+                    ->andWhere('scope_site.operateur = :operateur')
+                    ->setParameter('operateur', $user)
+                ;
+                return;
+            }
+
+            $queryBuilder
+                ->join("$alias.site", 'scope_site')
+                ->join('scope_site.entreprise', 'scope_entreprise')
+                ->andWhere('scope_entreprise = :entreprise')
+                ->setParameter('entreprise', $user->getEntreprise())
+            ; /*
+                - L'admin et l'agent peuvent voir tous les sites de l'entreprise
+            */
+        }
+    }
 }

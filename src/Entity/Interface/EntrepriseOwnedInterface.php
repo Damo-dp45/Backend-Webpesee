@@ -8,7 +8,7 @@ interface EntrepriseOwnedInterface
 {
     public function getEntreprise(): ?Entreprise;
 
-    public function setEntreprise(?Entreprise $identreprise): static;
+    public function setEntreprise(?Entreprise $entreprise): static;
 
     public function getCreatedBy(): ?int;
 

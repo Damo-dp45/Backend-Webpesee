@@ -16,6 +16,23 @@ class EntrepriseRepository extends ServiceEntityRepository
         parent::__construct($registry, Entreprise::class);
     }
 
+    public function findOneByCode(string $code): ?Entreprise
+    {
+        return $this->findOneBy([
+            'codeentreprise' => $code
+        ]);
+    }
+
+    public function findOneByCodePrefix(string $prefix): ?Entreprise
+    {
+        return $this->createQueryBuilder('e')
+            ->where('e.codeentreprise LIKE :prefix')
+            ->setParameter('prefix', $prefix . '%')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     //    /**
     //     * @return Entreprise[] Returns an array of Entreprise objects
     //     */

@@ -16,6 +16,23 @@ class SiteRepository extends ServiceEntityRepository
         parent::__construct($registry, Site::class);
     }
 
+    public function findOneByCode(string $code): ?Site
+    {
+        return $this->findOneBy([
+            'codesite' => $code
+        ]);
+    }
+
+    public function getListeSite(string $code): array
+    {
+        return $this->createQueryBuilder('s')
+            ->andWhere('s.codesite LIKE :code')
+            ->setParameter('code', '%' . $code . '%')
+            ->getQuery()
+            ->getResult()
+        ;
+    }
+
     //    /**
     //     * @return Site[] Returns an array of Site objects
     //     */
