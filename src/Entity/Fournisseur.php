@@ -14,6 +14,9 @@ use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use App\Domain\Enum\ReferenceStatus;
 use App\Entity\Interface\SiteOwnedInterface;
 use App\Repository\FournisseurRepository;
+use App\State\CreatedbyProcessor;
+use App\State\SoftDeleteProcessor;
+use App\State\UpdatedbyProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -48,7 +51,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
         ),
         new Post(
             security: "is_granted('CREER', 'Fournisseur')",
-            // processor: EntrepriseInjectionProcessor::class, -- FournisseurProcessor
+            processor: CreatedbyProcessor::class,
             openapi: new OpenApiOperation(
                 summary: 'Création d\'un fournisseur',
                 description: 'Permet de créer un fournisseur',
@@ -58,7 +61,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
         new Patch(
             security: "is_granted('MODIFIER', object)",
             requirements: ['id' => '\d+'],
-            // processor: UpdatedbyProcessor::class,
+            processor: UpdatedbyProcessor::class,
             openapi: new OpenApiOperation(
                 summary: 'Modification d\'un fournisseur',
                 description: 'Permet de modifier un fournisseur',
@@ -70,7 +73,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
             uriTemplate: '/fournisseurs/{id}/remove',
             requirements: ['id' => '\d+'],
             input: false,
-            // processor: SoftDeleteProcessor::class,
+            processor: SoftDeleteProcessor::class,
             openapi: new OpenApiOperation(
                 summary: 'Mise en corbeille d\'un fournisseur',
                 description: 'Permet de mettre un fournisseur en corbeille',
@@ -101,7 +104,7 @@ class Fournisseur extends EntityBase implements SiteOwnedInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[Groups(['read:Fournisseur'])]
+    #[Groups(['read:Fournisseur', 'write:Fournisseur'])]
     private ?string $codefournisseur = null; // On.. 'nullable' pour ne pas bloquer le desktop
 
     #[ORM\Column(length: 255)]

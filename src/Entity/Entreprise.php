@@ -11,10 +11,12 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\Domain\Enum\ReferenceStatus;
 use App\Entity\Input\EntrepriseInput;
+use App\Entity\Input\RechargerSoldeInput;
 use App\Repository\EntrepriseRepository;
 use App\State\DesactiverEntrepriseProcessor;
 use App\State\MeEntrepriseProcessor;
 use App\State\MeEntrepriseProvider;
+use App\State\RechargerSoldeEntrepriseProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -88,23 +90,19 @@ use Symfony\Component\Validator\Constraints as Assert;
                 security: [['bearerAuth' => []]]
             )
         ),
-
-
-
-        /* Solde — recharge depuis le super admin
-         */
         new Patch(
-            security: "is_granted('ROLE_SUPER_ADMIN')",
+            security: "is_granted('ROLE_ADMIN')",
             uriTemplate: '/entreprises/{id}/recharger',
             requirements: ['id' => '\d+'],
-            // input: RechargerSoldeInput::class,
-            // processor: RechargerSoldeEntrepriseProcessor::class,
-            denormalizationContext: ['groups' => ['write:RechargerSolde']],
+            input: RechargerSoldeInput::class,
+            processor: RechargerSoldeEntrepriseProcessor::class,
+            denormalizationContext: ['groups' => ['write:Recharger']],
             openapi: new Operation(
                 summary: 'Recharger le solde d\'une entreprise',
+                description: 'Permet de recharger le solde d\'une entreprise',
                 security: [['bearerAuth' => []]]
             )
-        ),
+        )
     ],
     openapi: new Operation(
         security: [['bearerAuth' => []]]

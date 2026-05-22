@@ -13,6 +13,9 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use App\Entity\Interface\SiteOwnedInterface;
+use App\State\CreatedbyProcessor;
+use App\State\SoftDeleteProcessor;
+use App\State\UpdatedbyProcessor;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -44,7 +47,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new Post(
             security: "is_granted('CREER', 'Produit')",
-            // processor: EntrepriseInjectionProcessor::class, -- ProduitProcessor
+            processor: CreatedbyProcessor::class,
             openapi: new OpenApiOperation(
                 summary: 'Création d\'un produit',
                 description: 'Permet de créer un produit',
@@ -54,7 +57,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         new Patch(
             security: "is_granted('MODIFIER', object)",
             requirements: ['id' => '\d+'],
-            // processor: UpdatedbyProcessor::class,
+            processor: UpdatedbyProcessor::class,
             openapi: new OpenApiOperation(
                 summary: 'Modification d\'un produit',
                 description: 'Permet de modifier un produit',
@@ -66,7 +69,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/produits/{id}/remove',
             requirements: ['id' => '\d+'],
             input: false,
-            // processor: SoftDeleteProcessor::class,
+            processor: SoftDeleteProcessor::class,
             openapi: new OpenApiOperation(
                 summary: 'Mise en corbeille d\'un produit',
                 description: 'Permet de mettre un produit en corbeille',

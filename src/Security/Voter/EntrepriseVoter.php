@@ -15,9 +15,7 @@ final class EntrepriseVoter extends Voter
     public const VOIR = 'VOIR';
     public const MODIFIER = 'MODIFIER';
 
-    public function __construct(
-        private Security $security
-    )
+    public function __construct(private Security $security)
     {
     }
 
@@ -59,7 +57,7 @@ final class EntrepriseVoter extends Voter
 
             case self::MODIFIER:
                 return $this->security->isGranted('ROLE_ADMIN') && $meentreprise; /*
-                    - On.. pas 'in_array('ROLE_ADMIN', $user->getRoles())' vu qu'on utilise le 'role_hierarchy'
+                    - On.. pas 'in_array('ROLE_ADMIN', $user->getRoles())' vu qu'on utilise le 'role_hierarchy', le 'ROLE_SUPER_ADMIN' aura accès vu qu'il hérite de l'admin
                 */
                 break;
         }

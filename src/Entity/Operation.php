@@ -51,13 +51,13 @@ use Symfony\Component\Serializer\Attribute\Groups;
 #[ApiFilter(SearchFilter::class, properties: [
     'mouvement' => 'partial',
     'client' => 'partial',
-    'fournisseur.id' => 'exact',
-    'produit.id' => 'exact',
-    'site.id' => 'exact',
     'transporteur' => 'partial',
     'immatriculation' => 'partial',
     'provenance' => 'partial',
-    'destination' => 'partial'
+    'destination' => 'partial',
+    'fournisseur.id' => 'exact',
+    'produit.id' => 'exact',
+    'site.id' => 'exact'
 ])]
 #[ApiFilter(DateFilter::class, properties: ['date2'])]
 #[ApiFilter(OrderFilter::class, properties: [
@@ -66,7 +66,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
     'poidsnet',
     'poidsbrut'
 ])]
-class Operation implements SiteOwnedInterface
+class Operation extends EntityBase implements SiteOwnedInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

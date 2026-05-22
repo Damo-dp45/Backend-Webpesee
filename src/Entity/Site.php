@@ -11,8 +11,14 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use App\Domain\Enum\SiteStatus;
+use App\Entity\Input\AssignerOperateurInput;
+use App\Entity\Input\AttribuerSoldeInput;
 use App\Entity\Interface\EntrepriseOwnedInterface;
 use App\Repository\SiteRepository;
+use App\State\AssignerOperateurProcessor;
+use App\State\AttribuerSoldeProcessor;
+use App\State\SiteProcessor;
+use App\State\SuspendreSiteProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -26,11 +32,13 @@ use Symfony\Component\Validator\Constraints as Assert;
     security: "is_granted('IS_AUTHENTICATED_FULLY')",
     normalizationContext: ['groups' => ['read:Site', 'read:Base'], 'skip_null_values' => false],
     denormalizationContext: ['groups' => ['write:Site']],
+    order: ['createdAt' => 'DESC'],
     operations: [
         new GetCollection(
             security: "is_granted('VOIR', 'Site')",
             openapi: new OpenApiOperation(
-                summary: 'Liste des sites',
+                summary: 'La liste des sites',
+                description: 'Permet de voir la liste des sites',
                 security: [['bearerAuth' => []]]
             )
         ),
@@ -39,66 +47,67 @@ use Symfony\Component\Validator\Constraints as Assert;
             requirements: ['id' => '\d+'],
             openapi: new OpenApiOperation(
                 summary: 'Un site',
+                description: 'Permet de voir un site',
                 security: [['bearerAuth' => []]]
             )
         ),
         new Post(
             security: "is_granted('CREER', 'Site')",
-            // processor: SiteProcessor::class,
+            processor: SiteProcessor::class,
             openapi: new OpenApiOperation(
                 summary: 'Créer un site',
+                description: 'Permet de créer un site',
                 security: [['bearerAuth' => []]]
             )
         ),
         new Patch(
             security: "is_granted('MODIFIER', object)",
             requirements: ['id' => '\d+'],
-            // processor: SiteProcessor::class,
+            processor: SiteProcessor::class,
             openapi: new OpenApiOperation(
                 summary: 'Modifier un site',
+                description: 'Permet de modifier un site',
                 security: [['bearerAuth' => []]]
             )
         ),
         new Patch(
-            security: "is_granted('ROLE_SUPER_ADMIN') or is_granted('ROLE_ADMIN')",
-            uriTemplate: '/sites/{id}/togglestatut',
+            security: "is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPER_ADMIN')",
+            uriTemplate: '/sites/{id}/suspendre',
             requirements: ['id' => '\d+'],
             input: false,
-            // processor: ToggleStatutSiteProcessor::class,
+            processor: SuspendreSiteProcessor::class,
             openapi: new OpenApiOperation(
                 summary: 'Bloquer ou débloquer un site',
+                description: 'Permet de bloquer ou débloquer un site',
                 security: [['bearerAuth' => []]]
             )
         ),
-        /* Solde — attribution depuis l'entreprise vers le site
-         */
+        new Patch(
+            security: "is_granted('ROLE_ADMIN') or is_granted('ROLE_AGENT')",
+            uriTemplate: '/sites/{id}/assigner',
+            requirements: ['id' => '\d+'],
+            input: AssignerOperateurInput::class,
+            processor: AssignerOperateurProcessor::class,
+            denormalizationContext: ['groups' => ['write:Assigner']],
+            openapi: new OpenApiOperation(
+                summary: 'Assigner un opérateur à un site',
+                description: 'Permet d\'assigner un opérateur à un site',
+                security: [['bearerAuth' => []]]
+            )
+        ),
         new Patch(
             security: "is_granted('ROLE_ADMIN')",
             uriTemplate: '/sites/{id}/attribuersolde',
             requirements: ['id' => '\d+'],
-            // input: AttribuerSoldeInput::class,
-            // processor: AttribuerSoldeProcessor::class,
-            denormalizationContext: ['groups' => ['write:AttribuerSolde']],
+            input: AttribuerSoldeInput::class,
+            processor: AttribuerSoldeProcessor::class,
+            denormalizationContext: ['groups' => ['write:Attribuer']],
             openapi: new OpenApiOperation(
                 summary: 'Attribuer un solde à un site',
                 description: 'Débite le solde de l\'entreprise et crédite le site',
                 security: [['bearerAuth' => []]]
             )
-        ),
-        /* Opérateur — assignation
-         */
-        new Patch(
-            security: "is_granted('ROLE_ADMIN') or is_granted('ROLE_AGENT')",
-            uriTemplate: '/sites/{id}/assigner',
-            requirements: ['id' => '\d+'],
-            // input: AssignerOperateurInput::class,
-            // processor: AssignerOperateurProcessor::class,
-            denormalizationContext: ['groups' => ['write:AssignerOperateur']],
-            openapi: new OpenApiOperation(
-                summary: 'Assigner un opérateur à un site',
-                security: [['bearerAuth' => []]]
-            )
-        ),
+        )
     ],
     openapi: new OpenApiOperation(
         security: [['bearerAuth' => []]]
@@ -110,7 +119,6 @@ use Symfony\Component\Validator\Constraints as Assert;
     'statut' => 'exact'
 ])]
 class Site extends EntityBase implements EntrepriseOwnedInterface
-
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -129,7 +137,7 @@ class Site extends EntityBase implements EntrepriseOwnedInterface
     private ?string $libellesite = null;
 
     #[ORM\ManyToOne(inversedBy: 'sites')]
-    #[Groups(['read:Site', 'write:Site'])]
+    #[Groups(['read:Site'])]
     private ?Entreprise $entreprise = null; // On.. 'nullable' pour ne pas casser la synchro desktop
 
     #[ORM\Column]
@@ -159,7 +167,7 @@ class Site extends EntityBase implements EntrepriseOwnedInterface
     private Collection $produits;
 
     #[ORM\ManyToOne(inversedBy: 'sites')]
-    #[Groups(['read:Site', 'write:AssignerOperateur'])]
+    #[Groups(['read:Site'])]
     private ?User $operateur = null; // Un site a un opérateur et un opérateur peut gérer plusieurs sites
 
     /**

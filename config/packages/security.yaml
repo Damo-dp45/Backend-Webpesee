@@ -58,12 +58,12 @@ security:
         # - { path: ^/profile, roles: ROLE_USER }
         - { path: ^/api/(login|token/refresh), roles: PUBLIC_ACCESS }
 
-    role_hierarchy:
-        ROLE_SITE: [] # On l'a isolé sans héritage vers 'ROLE_USER' vu qu'il aura accès qu'à l'endpoint de synchronisation, le rôle pour les comptes machines par pont bascule 'desktop' 
-        ROLE_OPERATEUR: [ROLE_USER]
-        ROLE_AGENT: [ROLE_OPERATEUR]
-        ROLE_ADMIN: [ROLE_AGENT]
-        ROLE_SUPER_ADMIN: [ROLE_ADMIN]
+    # role_hierarchy:
+    #    ROLE_SITE: []
+    #    ROLE_OPERATEUR: [ROLE_USER]
+    #    ROLE_AGENT: [ROLE_OPERATEUR]
+    #    ROLE_ADMIN: [ROLE_AGENT]
+    #    ROLE_SUPER_ADMIN: [ROLE_ADMIN]
 
 when@test:
     security:

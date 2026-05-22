@@ -9,7 +9,6 @@ use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
-use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Domain\Enum\ModePaiement;
 use App\Domain\Enum\StatutPaiement;
@@ -19,14 +18,14 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use App\Entity\Input\PaiementInput;
+use App\State\PaiementProcessor;
 use Symfony\Component\Serializer\Attribute\Groups;
-use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: PaiementRepository::class)]
 #[ApiResource(
     security: "is_granted('IS_AUTHENTICATED_FULLY')",
     normalizationContext: ['groups' => ['read:Paiement', 'read:Base'], 'skip_null_values' => false],
-    denormalizationContext: ['groups' => ['write:Paiement']],
     paginationItemsPerPage: 25,
     paginationClientItemsPerPage: true,
     order: ['createdAt' => 'DESC'],
@@ -50,36 +49,14 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new Post(
             security: "is_granted('CREER', 'Paiement')",
-            // input: PaiementInput::class,
-            // processor: PaiementProcessor::class,
+            input: PaiementInput::class,
+            processor: PaiementProcessor::class,
             denormalizationContext: ['groups' => ['write:PaiementInput']], /*
-                - Le processor calcule le montant, débite le site, crée le MouvementCaisse et déclenche le mobile money si besoin
+                - Le processor calcule le montant, débite le site, crée le 'MouvementCaisse' et déclenche le mobile money si besoin
             */
             openapi: new OpenApiOperation(
                 summary: 'Créer un paiement',
-                description: 'Payer un fournisseur (planteur) en une ou plusieurs fois',
-                security: [['bearerAuth' => []]]
-            )
-        ),
-        new Patch(
-            security: "is_granted('MODIFIER', object)",
-            requirements: ['id' => '\d+'],
-            // processor: UpdatedbyProcessor::class,
-            openapi: new OpenApiOperation(
-                summary: 'Modification d\'un paiement',
-                description: 'Permet de modifier un paiement',
-                security: [['bearerAuth' => []]]
-            )
-        ),
-        new Patch(
-            security: "is_granted('SUPPRIMER', object)",
-            uriTemplate: '/paiements/{id}/remove',
-            requirements: ['id' => '\d+'],
-            input: false,
-            // processor: SoftDeleteProcessor::class,
-            openapi: new OpenApiOperation(
-                summary: 'Mise en corbeille d\'un paiement',
-                description: 'Permet de mettre un paiement en corbeille',
+                description: 'Payer un fournisseur ou planteur en une ou plusieurs fois',
                 security: [['bearerAuth' => []]]
             )
         )

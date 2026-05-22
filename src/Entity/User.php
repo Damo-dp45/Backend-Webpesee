@@ -54,9 +54,11 @@ use Symfony\Component\Validator\Constraints as Assert;
                 description: 'Crée un nouvel utilisateur et son entreprise'
             )
         ),
+        /* Admin
+         */
         new GetCollection(
-            security: "is_granted('USER_VOIR') or is_granted('ROLE_SUPER_ADMIN')", /*
-                - Pour le filtre du 'entreprise' on l'a fais dans 'UserEntrepriseExtension'
+            security: "is_granted('VOIR', 'User')", /*
+                - Pour le filtre du 'entreprise' on l'a fais dans 'UserEntrepriseExtension' et on.. 'ROLE_ADMIN' qui donne accès à l'admin et au super admin gràce à 'role_hierarchy'
             */
             openapi: new Operation(
                 summary: 'La liste des utilisateurs',
@@ -65,7 +67,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             )
         ),
         new Get(
-            // security: "is_granted('USER_VOIR', object) or is_granted('ROLE_SUPER_ADMIN')",
+            security: "is_granted('VOIR', object)",
             requirements: ['id' => '\d+'], /*
                 - Pour le filtre du 'entreprise' on l'a fais dans 'UserEntrepriseExtension'
             */
@@ -76,7 +78,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             )
         ),
         new Post(
-            // security: "is_granted('CREER', object)",
+            security: "is_granted('CREER', 'User')",
             processor: UserProcessor::class,
             openapi: new Operation(
                 summary: 'Créer un utilisateur',
@@ -85,7 +87,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             )
         ),
         new Patch(
-            // security: "is_granted('MODIFIER', object)",
+            security: "is_granted('MODIFIER', object)",
             requirements: ['id' => '\d+'], 
             processor: UserProcessor::class,
             openapi: new Operation(
@@ -190,7 +192,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     #[ORM\Column]
     #[Groups(['read:User'])]
-    private array $roles = []; // On.. 'ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_AGENT', 'ROLE_OPERATEUR'
+    private array $roles = [];
 
     /**
      * @var string The hashed password
@@ -469,5 +471,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
 
         return $this;
+    }
+
+    public function getSitesCount(): int
+    {
+        return $this->sites->count();
     }
 }

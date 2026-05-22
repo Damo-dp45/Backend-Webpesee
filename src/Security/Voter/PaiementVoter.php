@@ -15,9 +15,7 @@ final class PaiementVoter extends Voter
     public const VOIR = 'VOIR';
     public const CREER = 'CREER';
 
-    public function __construct(
-        private Security $security
-    )
+    public function __construct(private Security $security)
     {
     }
 
@@ -40,18 +38,17 @@ final class PaiementVoter extends Voter
 
         if($subject === 'Paiement') {
             return match($attribute) {
-                'VOIR'  => true, // Filtré par EntrepriseScopeExtension
-                'CREER' => $this->security->isGranted('ROLE_OPERATEUR')
-                        && !$this->security->isGranted('ROLE_AGENT'), /*
-                            - Uniquement ROLE_OPERATEUR pur
-                              AGENT/ADMIN ne créent pas de paiements
-                        */
+                self::VOIR  => true, // Filtré par EntrepriseScopeExtension
+                self::CREER => $this->security->isGranted('ROLE_OPERATEUR'), /*
+                    - L'opérateur paye mais l'admin et l'agent recharge
+                */
                 default => false
             };
-            // return true;  Filtré par EntrepriseScopeExtension
         }
 
-        /** @var Paiement $paiement */
+        /**
+         * @var Paiement
+         */
         $paiement = $subject;
         $sonSite = $paiement->getSite()?->getOperateur()?->getId() === $user->getId();
         $memeEntreprise = $paiement->getSite()?->getEntreprise()?->getId() === $user->getEntreprise()?->getId();
@@ -60,6 +57,5 @@ final class PaiementVoter extends Voter
             self::VOIR => $memeEntreprise || $sonSite,
             default => false
         };
-
     }
 }

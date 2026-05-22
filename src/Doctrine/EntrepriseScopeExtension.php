@@ -76,7 +76,7 @@ class EntrepriseScopeExtension implements QueryCollectionExtensionInterface, Que
 
         if(is_subclass_of($resourceClass, SiteOwnedInterface::class)) {
             $queryBuilder->andWhere("$alias.deletedAt IS NULL");
-            if($this->security->isGranted('ROLE_OPERATEUR') && !$this->security->isGranted('ROLE_AGENT')) { /*
+            if($this->security->isGranted('ROLE_OPERATEUR')) { /*
                 - L'opérateur ne voit que ses sites assignés
             */
                 $queryBuilder

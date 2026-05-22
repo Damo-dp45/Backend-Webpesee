@@ -17,6 +17,10 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use App\Domain\Enum\StatutDemande;
+use App\Entity\Input\RejeterDemandeInput;
+use App\State\ApprouverDemandeProcessor;
+use App\State\DemandeSoldeProcessor;
+use App\State\RejeterDemandeProcessor;
 use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: DemandeSoldeRepository::class)]
@@ -31,7 +35,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
         new GetCollection(
             security: "is_granted('VOIR', 'DemandeSolde')",
             openapi: new OpenApiOperation(
-                summary: 'Liste des demandes de solde',
+                summary: 'La liste des demandes de solde',
                 description: 'Permet de voir la liste des demandes de solde',
                 security: [['bearerAuth' => []]]
             )
@@ -46,10 +50,8 @@ use Symfony\Component\Serializer\Attribute\Groups;
             )
         ),
         new Post(
-            security: "is_granted('CREER', 'DemandeSolde')", /*
-                - Uniquement l'opérateur dont le site est épuisé
-            */
-            // processor: DemandeSoldeProcessor::class,
+            security: "is_granted('CREER', 'DemandeSolde')",
+            processor: DemandeSoldeProcessor::class,
             openapi: new OpenApiOperation(
                 summary: 'Créer une demande de solde',
                 description: 'L\'opérateur demande une recharge de solde pour son site',
@@ -58,27 +60,30 @@ use Symfony\Component\Serializer\Attribute\Groups;
         ),
         new Patch(
             security: "is_granted('TRAITER', object)",
-            uriTemplate: '/demandes-solde/{id}/approuver',
+            uriTemplate: '/demande_soldes/{id}/approuver',
             requirements: ['id' => '\d+'],
             input: false,
+            processor: ApprouverDemandeProcessor::class,
             /*
-            processor: ApprouverDemandeProcessor::class, 
+                processor: ApprouverDemandeProcessor::class, 
                 - Crédite Site.solde, débite Entreprise.solde, crée MouvementCaisse
             */
             openapi: new OpenApiOperation(
                 summary: 'Approuver une demande de solde',
+                description: 'Permet d\'approuver une demandes de solde',
                 security: [['bearerAuth' => []]]
             )
         ),
         new Patch(
             security: "is_granted('TRAITER', object)",
-            uriTemplate: '/demandes-solde/{id}/rejeter',
+            uriTemplate: '/demande_soldes/{id}/rejeter',
             requirements: ['id' => '\d+'],
-            // input: RejeterDemandeInput::class,
-            // processor: RejeterDemandeProcessor::class,
-            denormalizationContext: ['groups' => ['write:RejeterDemande']],
+            input: RejeterDemandeInput::class,
+            processor: RejeterDemandeProcessor::class,
+            denormalizationContext: ['groups' => ['write:Rejeter']],
             openapi: new OpenApiOperation(
                 summary: 'Rejeter une demande de solde',
+                description: 'Permet de rejeter une demandes de solde',
                 security: [['bearerAuth' => []]]
             )
         ),

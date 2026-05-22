@@ -43,27 +43,27 @@ final class FournisseurVoter extends Voter
             return false;
         }
 
-        // Collection
+        /* Pour les routes sans objet
+         */
         if($subject === 'Fournisseur') {
-            return true; // Filtré par EntrepriseScopeExtension
+            return true; /*
+                - Le filtre géré par 'EntrepriseScopeExtension' et pour la logique on peut 'Fournisseur_VOIR'..
+            */
         }
 
-        /** @var Fournisseur $fournisseur */
+        /**
+         * @var Fournisseur
+         */
         $fournisseur = $subject;
         $sonSite = $fournisseur->getSite()?->getOperateur()?->getId() === $user->getId();
-        $memeEntreprise = $fournisseur->getSite()?->getEntreprise()?->getId() === $user->getEntreprise()?->getId();
-
+        $memeEntreprise = $fournisseur->getSite()?->getEntreprise()?->getId() === $user->getEntreprise()?->getId(); /*
+            - On peut s'en passer vu qu'il est géré par le filtre 'EntrepriseScopeExtension'
+        */
         return match($attribute) {
             self::VOIR => $memeEntreprise || $sonSite,
-            self::MODIFIER  => $memeEntreprise && (in_array('ROLE_ADMIN', $user->getRoles()) || in_array('ROLE_AGENT', $user->getRoles()) || $sonSite),
-            self::SUPPRIMER => $memeEntreprise && (in_array('ROLE_ADMIN', $user->getRoles()) || in_array('ROLE_AGENT', $user->getRoles())),
+            self::MODIFIER  => (in_array('ROLE_AGENT', $user->getRoles()) || in_array('ROLE_ADMIN', $user->getRoles())) ? $memeEntreprise : $sonSite, // L'admin et l'agent pour tous les fournisseurs, l'opérateur que ceux de son site
+            self::SUPPRIMER => $memeEntreprise && (in_array('ROLE_ADMIN', $user->getRoles()) || in_array('ROLE_AGENT', $user->getRoles())), // Ou.. '(in_array('ROLE_ADMIN', $user->getRoles()) || in_array('ROLE_AGENT', $user->getRoles()))'
             default => false
-        }; /*
-            'MODIFIER'  => $this->security->isGranted('ROLE_AGENT') ? $memeEntreprise : $sonSite, /*
-                - AGENT/ADMIN → toute l'entreprise
-                - OPERATEUR   → uniquement son site
-            *
-            'SUPPRIMER' => $memeEntreprise && $this->security->isGranted('ROLE_AGENT')
-        */
+        };
     }
 }

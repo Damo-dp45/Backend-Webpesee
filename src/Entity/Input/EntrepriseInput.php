@@ -31,7 +31,7 @@ class EntrepriseInput
 
     #[Assert\NotBlank()]
     #[Assert\Length(min: 2)]
-    #[Groups('write:Register')]
+    #[Groups('write:EntrepriseInput')]
     public ?int $solde = null;
     /*
         #[Groups(['write:EntrepriseInput'])]

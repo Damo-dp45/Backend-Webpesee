@@ -17,9 +17,7 @@ final class ProduitVoter extends Voter
     public const MODIFIER = 'MODIFIER';
     public const SUPPRIMER = 'SUPPRIMER';
 
-    public function __construct(
-        private Security $security
-    )
+    public function __construct(private Security $security)
     {
     }
 
@@ -44,22 +42,23 @@ final class ProduitVoter extends Voter
         }
 
         if($subject === 'Produit') {
-            return true; // Filtré par EntrepriseScopeExtension
+            return true; /*
+                - Le filtre géré par 'EntrepriseScopeExtension' et pour la logique on peut 'Produit_VOIR'..
+            */
         }
 
-        /** @var Produit $produit */
+        /**
+         * @var Produit
+         */
         $produit = $subject;
         $sonSite = $produit->getSite()?->getOperateur()?->getId() === $user->getId();
         $memeEntreprise = $produit->getSite()?->getEntreprise()?->getId() === $user->getEntreprise()?->getId();
 
         return match($attribute) {
             self::VOIR => $memeEntreprise || $sonSite,
-            self::MODIFIER  => $memeEntreprise && (in_array('ROLE_ADMIN', $user->getRoles()) || in_array('ROLE_AGENT', $user->getRoles()) || $sonSite),
-            self::SUPPRIMER => $memeEntreprise && (in_array('ROLE_ADMIN', $user->getRoles()) || in_array('ROLE_AGENT', $user->getRoles())),
+            self::MODIFIER  => (in_array('ROLE_AGENT', $user->getRoles()) || in_array('ROLE_ADMIN', $user->getRoles())) ? $memeEntreprise : $sonSite,
+            self::SUPPRIMER => $memeEntreprise && (in_array('ROLE_AGENT', $user->getRoles()) || in_array('ROLE_ADMIN', $user->getRoles())),
             default => false
-        }; /*
-            'MODIFIER' => $this->security->isGranted('ROLE_AGENT') ? $memeEntreprise : $sonSite,
-            'SUPPRIMER' => $memeEntreprise && $this->security->isGranted('ROLE_AGENT')
-        */
+        };
     }
 }
